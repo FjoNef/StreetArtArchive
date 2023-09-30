@@ -1,56 +1,82 @@
-import React, { Component } from 'react';
+import React, {Component, useCallback, useState} from 'react';
 import {Card, CardBody, CardText, CardTitle, Col, Row} from 'reactstrap';
+import InfiniteScroll from 'react-infinite-scroller';
 
 export class FetchData extends Component {
-  static displayName = FetchData.name;
+  static displayName = FetchData.name;  
 
   constructor(props) {
     super(props);
-    this.state = { forecasts: [], loading: true };
+    this.state = {forecasts: [], hasMore: true, loading: false};
+    this.populateWeatherData = this.populateWeatherData.bind(this);
+  }
+  
+  async fetchData(){
+      if(this.state.loading){
+          return;
+      }
+
+      this.setState({ loading: true });
+
+      try{
+
+          const response = await fetch('weatherforecast?page='+0);
+          const data = await response.json();
+          this.setState( { forecasts: [...this.state.forecasts, ...data.pictures], hasMore: data.hasMore})
+      }
+      finally {
+          this.setState({ loading: false });
+      }
   }
 
-  componentDidMount() {
-    this.populateWeatherData();
-  }
+    async populateWeatherData(page) {
+        if(this.state.loading){
+            return;
+        }
 
-  static renderForecastsTable(forecasts) {
-    return (
-      <Row xs={3}>
-        {forecasts.map(forecast =>
-            <Col>
-              <Card>
-                <CardBody>
-                  <CardTitle tag="h5">
-                    {forecast.date}
-                  </CardTitle>
-                  <CardText>
-                    {forecast.temperatureC} {forecast.temperatureF} {forecast.summary}
-                  </CardText>
-                </CardBody>
-              </Card>
-            </Col>
-        )}
-      </Row>
-    );
-  }
+        this.setState({ loading: true });
+
+        try{
+
+            const response = await fetch('weatherforecast?page='+page);
+            const data = await response.json();
+            this.setState( { forecasts: [...this.state.forecasts, ...data.pictures], hasMore: data.hasMore})
+        }
+        finally {
+            this.setState({ loading: false });
+        }
+    }
 
   render() {
-    let contents = this.state.loading
-      ? <p><em>Loading...</em></p>
-      : FetchData.renderForecastsTable(this.state.forecasts);
-
     return (
       <div>
         <h1 id="tableLabel">Weather forecast</h1>
-        <p>This component demonstrates fetching data from the server.</p>
-        {contents}
+        
+          <InfiniteScroll
+              pageStart={0}
+              loadMore={this.populateWeatherData}
+              hasMore={this.state.hasMore}
+              loader={<div className="loader" key={0}>Loading ...</div>}
+          >
+              <Row xs={3}>
+            {this.state.forecasts.map(forecast =>
+                <Col>
+                  <Card>
+                    <CardBody>
+                      <CardTitle tag="h5">
+                        {forecast.date}
+                      </CardTitle>
+                      <CardText>
+                        {forecast.temperatureC} {forecast.temperatureF} {forecast.summary}
+                      </CardText>
+                    </CardBody>
+                  </Card>
+                </Col>
+            )}
+              </Row>
+          </InfiniteScroll>
+        
       </div>
     );
-  }
-
-  async populateWeatherData() {
-    const response = await fetch('weatherforecast');
-    const data = await response.json();
-    this.setState({ forecasts: data, loading: false });
   }
 }
