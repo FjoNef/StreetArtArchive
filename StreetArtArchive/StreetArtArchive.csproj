@@ -14,7 +14,9 @@
     </PropertyGroup>
 
     <ItemGroup>
+        <PackageReference Include="Aspose.Imaging" Version="23.9.0" />
         <PackageReference Include="Microsoft.AspNetCore.SpaProxy" Version="7.0.9"/>
+        <PackageReference Include="MongoDB.Driver" Version="2.21.0" />
     </ItemGroup>
 
     <ItemGroup>
@@ -22,6 +24,8 @@
         <Content Remove="$(SpaRoot)**"/>
         <None Remove="$(SpaRoot)**"/>
         <None Include="$(SpaRoot)**" Exclude="$(SpaRoot)node_modules\**"/>
+        <None Include="Models\PictureMetadata.cs" />
+        <None Include="Models\StreetArtDbSettings.cs" />
     </ItemGroup>
 
     <Target Name="DebugEnsureNodeEnv" BeforeTargets="Build" Condition=" '$(Configuration)' == 'Debug' And !Exists('$(SpaRoot)node_modules') ">

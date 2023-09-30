@@ -1,8 +1,16 @@
+using StreetArtArchive.Models;
+using StreetArtArchive.Services;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 
 builder.Services.AddControllersWithViews();
+
+builder.Services.Configure<StreetArtDbSettings>(
+    builder.Configuration.GetSection("StreetArtDatabase"));
+
+builder.Services.AddSingleton<PictureService>();
 
 var app = builder.Build();
 
