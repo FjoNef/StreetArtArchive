@@ -4,16 +4,16 @@ namespace StreetArtArchive.Controllers;
 
 [ApiController]
 [Route("[controller]")]
-public class WeatherForecastController : ControllerBase
+public class PicturesController : ControllerBase
 {
     private static readonly string[] Summaries = new[]
     {
         "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
     };
 
-    private readonly ILogger<WeatherForecastController> _logger;
+    private readonly ILogger<PicturesController> _logger;
 
-    public WeatherForecastController(ILogger<WeatherForecastController> logger)
+    public PicturesController(ILogger<PicturesController> logger)
     {
         _logger = logger;
     }
@@ -21,7 +21,8 @@ public class WeatherForecastController : ControllerBase
     [HttpGet]
     public object Get(int page)
     {
-        var weather = Enumerable.Range(1, 5).Select(index => new WeatherForecast
+        Thread.Sleep(1000);
+        var weather = Enumerable.Range(1, 9).Select(index => new WeatherForecast
             {
                 Date = DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
                 TemperatureC = Random.Shared.Next(-20, 55),
