@@ -19,12 +19,15 @@ export class FetchData extends Component {
       this.setState({ loading: true });
 
       try{
-        const response = await fetch('pictures?page='+this.state.page);
+        const response = await fetch('pictures/GetList?page='+this.state.page);
         const data = await response.json();
         this.setState( { 
           pictures: [...this.state.pictures, ...data.pictures], 
           page: this.state.page+1, 
           hasMore: data.hasMore})
+      }
+      catch (e){
+        this.setState({ hasMore: false });
       }
       finally {
         this.setState({ loading: false });
@@ -42,15 +45,21 @@ export class FetchData extends Component {
               loader={<div className="loader" key={0}>Loading ...</div>}
           >
               <Row xs={3}>
-                {this.state.pictures.map(forecast =>
+                {this.state.pictures.map(picture =>
                     <Col>
-                      <Card>
+                      <Card body>
+                        <img
+                          alt= "No Thumbnail"
+                          src = {"data:image/png;base64," + picture.thumbnail.data}
+                          width="100%"
+                        />
                         <CardBody>
                           <CardTitle tag="h5">
-                            {forecast.date}
+                            {picture.categories.find(c => c.name === "Name")?.values[0]}
                           </CardTitle>
                           <CardText>
-                            {forecast.temperatureC} {forecast.temperatureF} {forecast.summary}
+                            {picture.categories.find(c => c.name === "Year")?.values[0]}
+                            {picture.categories.find(c => c.name === "Author")?.values}
                           </CardText>
                         </CardBody>
                       </Card>

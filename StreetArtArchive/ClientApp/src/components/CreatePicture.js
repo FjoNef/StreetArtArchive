@@ -37,7 +37,7 @@ export class CreatePicture extends Component {
       method: 'POST',
       body: formData
     }
-    const response = await fetch('pictures', config);
+    const response = await fetch('pictures/SavePicture', config);
 
     if (response.ok) {
       this.props.history.push('/fetch-data');

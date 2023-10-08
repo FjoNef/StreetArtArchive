@@ -1,13 +1,12 @@
-﻿using Aspose.Imaging;
-
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
+using SkiaSharp;
 using StreetArtArchive.Models;
 using StreetArtArchive.Services;
 
 namespace StreetArtArchive.Controllers;
 
 [ApiController]
-[Route("[controller]")]
+[Route("[controller]/[action]")]
 public class PicturesController : ControllerBase
 {
     private readonly PictureService _pictureService;
@@ -20,14 +19,18 @@ public class PicturesController : ControllerBase
         _pictureService = pictureService;
     }
 
-    [HttpGet("{page:length(24)}")]
-    public async Task<object> Get(int page)
+    [HttpGet]
+    public async Task<object> GetList(int page)
     {
         var pictures = await _pictureService.GetAsync(page);
+        foreach (var picture in pictures)
+        {
+            picture.Thumbnail = await _pictureService.GetThumbnailAsync(picture.ThumbnailId);
+        }
         return new { pictures, hasMore = pictures.Count == 9 };
     }
     
-    [HttpGet("{id:length(24)}")]
+    /*[HttpGet("{id:length(24)}")]
     public async Task<ActionResult<PicturesMetadata>> Get(string id)
     {
         var book = await _pictureService.GetAsync(id);
@@ -38,34 +41,52 @@ public class PicturesController : ControllerBase
         }
 
         return book;
-    }
+    }*/
     
     [HttpPost]
-    public async Task<IActionResult> Post([FromForm] SavePictureRequest request)
+    public async Task<IActionResult> SavePicture([FromForm] SavePictureRequest request)
     {
         var filePath = @"C:\Users\fjodo\Pictures\" + request.Image.FileName;
         using (var stream = System.IO.File.Create(filePath))
         {
-            request.Image.CopyTo(stream);
+            await request.Image.CopyToAsync(stream);
         }
-        
-        
-        using (Image image = Image.Load(filePath))
+
+        SKBitmap originalBitmap;
+        using (var stream =  request.Image.OpenReadStream())
         {
-            // Invoke the Resize method with the type of LanczosResample. 
-            image.Resize(100, 100, ResizeType.Bell); 
-            // Call the Save method to save the thumbnail image.       
-            image.Save(filePath+".thumbnail");    
+            originalBitmap = SKBitmap.Decode(stream);
         }
+        
+        var (newWidth, newHeight) = CalculateNewSize(originalBitmap);
+
+        var thumbnailBitmap = originalBitmap.Resize(new SKSizeI(newWidth, newHeight), SKFilterQuality.Low);
+
+        var thumbnailImage = SKImage.FromBitmap(thumbnailBitmap);
+
+        var thumbnailData = thumbnailImage.Encode();
+
+        var thumbnail = new Thumbnail() { Data = thumbnailData.ToArray() };
+
+        await _pictureService.SaveThumbnailAsync(thumbnail);
         
         var newPicture = new PicturesMetadata
         {
             ImagePath = filePath,
+            ThumbnailId = thumbnail.Id,
             Categories = request.Categories.Select(c => new Category(){ Name = c.Name, Values = new[]{c.Values}}).ToArray()
         };
 
         await _pictureService.CreateAsync(newPicture);
 
-        return CreatedAtAction(nameof(Get), new { id = newPicture.Id }, newPicture);
+        return CreatedAtAction(nameof(GetList), new { id = newPicture.Id }, newPicture);
+    }
+
+    private static (int newWidth, int newHeight) CalculateNewSize(SKBitmap originalBitmap)
+    {
+        var ratio = Math.Max(originalBitmap.Width / 500.0, originalBitmap.Height / 500.0);
+        var newWidth = (int)(originalBitmap.Width / ratio);
+        var newHeight = (int)(originalBitmap.Height / ratio);
+        return (newWidth, newHeight);
     }
 }
