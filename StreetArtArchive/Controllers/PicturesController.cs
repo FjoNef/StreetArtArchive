@@ -40,7 +40,7 @@ public class PicturesController : ControllerBase
     {
         //TODO: move constants
         var directory = Directory.CreateDirectory(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData) +
-                                                  @"StreetArtArchive\Photos");
+                                                  Path.Combine("StreetArtArchive", "Pictures"));
         var filePath = directory + Path.GetRandomFileName() + Path.GetExtension(request.Image.FileName);
         await using (var stream = System.IO.File.Create(filePath))
         {
@@ -58,7 +58,15 @@ public class PicturesController : ControllerBase
 
         await _pictureService.CreateAsync(newPicture);
 
-        return CreatedAtAction(nameof(GetList), new { id = newPicture.Id }, newPicture);
+        return CreatedAtAction(nameof(SavePicture), newPicture);
+    }
+    
+    [HttpDelete]
+    public async Task<IActionResult> DeleteById(string id)
+    {
+        await _pictureService.RemoveAsync(id);
+
+        return Accepted();
     }
 
     private async Task<Thumbnail> CreateThumbnailAsync(SavePictureRequest request)
