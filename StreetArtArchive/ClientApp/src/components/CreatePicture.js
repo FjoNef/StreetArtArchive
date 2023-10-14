@@ -1,7 +1,8 @@
 import React, {Component} from 'react';
+import { useNavigate } from "react-router-dom";
 import {Button, Col, Form, FormGroup, Input, InputGroup, Label, Row} from "reactstrap";
 
-export class CreatePicture extends Component {
+class CreatePictureComponent extends Component {
   static displayName = CreatePicture.name;
 
   constructor(props) {
@@ -13,6 +14,10 @@ export class CreatePicture extends Component {
     this.onChangeValue = this.onChangeValue.bind(this);
     this.onChangeImage = this.onChangeImage.bind(this);
     this.removeCategory = this.removeCategory.bind(this);
+  }
+  
+  componentDidMount() {
+    
   }
 
   addCategory() {
@@ -27,6 +32,7 @@ export class CreatePicture extends Component {
 
   async submit(e) {
     e.preventDefault();
+    const { navigate } = this.props;
     const formData = new FormData();
     formData.append('image',this.state.image, this.state.image.name);
     this.state.categories.map((category, index) => {
@@ -40,7 +46,7 @@ export class CreatePicture extends Component {
     const response = await fetch('pictures/SavePicture', config);
 
     if (response.ok) {
-      this.props.history.push('/fetch-data');
+      navigate('/fetch-data');
     } else {
       console.log(response);
     }
@@ -106,4 +112,10 @@ export class CreatePicture extends Component {
       </div>
     );
   }
+}
+
+export function CreatePicture(props) {
+  const navigate = useNavigate();
+
+  return <CreatePictureComponent {...props} navigate={navigate} />;
 }

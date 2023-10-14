@@ -11,11 +11,8 @@ public class PicturesController : ControllerBase
 {
     private readonly PictureService _pictureService;
 
-    private readonly ILogger<PicturesController> _logger;
-
-    public PicturesController(ILogger<PicturesController> logger, PictureService pictureService)
+    public PicturesController(PictureService pictureService)
     {
-        _logger = logger;
         _pictureService = pictureService;
     }
 
@@ -30,46 +27,28 @@ public class PicturesController : ControllerBase
         return new { pictures, hasMore = pictures.Count == 9 };
     }
     
-    /*[HttpGet("{id:length(24)}")]
-    public async Task<ActionResult<PicturesMetadata>> Get(string id)
+    [HttpGet]
+    public async Task<ActionResult<PicturesMetadata?>> GetById(string id)
     {
         var book = await _pictureService.GetAsync(id);
 
-        if (book is null)
-        {
-            return NotFound();
-        }
-
         return book;
-    }*/
+    }
     
     [HttpPost]
     public async Task<IActionResult> SavePicture([FromForm] SavePictureRequest request)
     {
-        var filePath = @"C:\Users\fjodo\Pictures\" + request.Image.FileName;
-        using (var stream = System.IO.File.Create(filePath))
+        //TODO: move constants
+        var directory = Directory.CreateDirectory(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData) +
+                                                  @"StreetArtArchive\Photos");
+        var filePath = directory + Path.GetRandomFileName() + Path.GetExtension(request.Image.FileName);
+        await using (var stream = System.IO.File.Create(filePath))
         {
             await request.Image.CopyToAsync(stream);
         }
 
-        SKBitmap originalBitmap;
-        using (var stream =  request.Image.OpenReadStream())
-        {
-            originalBitmap = SKBitmap.Decode(stream);
-        }
-        
-        var (newWidth, newHeight) = CalculateNewSize(originalBitmap);
+        var thumbnail = await CreateThumbnailAsync(request);
 
-        var thumbnailBitmap = originalBitmap.Resize(new SKSizeI(newWidth, newHeight), SKFilterQuality.Low);
-
-        var thumbnailImage = SKImage.FromBitmap(thumbnailBitmap);
-
-        var thumbnailData = thumbnailImage.Encode();
-
-        var thumbnail = new Thumbnail() { Data = thumbnailData.ToArray() };
-
-        await _pictureService.SaveThumbnailAsync(thumbnail);
-        
         var newPicture = new PicturesMetadata
         {
             ImagePath = filePath,
@@ -82,9 +61,29 @@ public class PicturesController : ControllerBase
         return CreatedAtAction(nameof(GetList), new { id = newPicture.Id }, newPicture);
     }
 
+    private async Task<Thumbnail> CreateThumbnailAsync(SavePictureRequest request)
+    {
+        SKBitmap originalBitmap;
+        await using (var stream = request.Image.OpenReadStream())
+        {
+            originalBitmap = SKBitmap.Decode(stream);
+        }
+
+        var (newWidth, newHeight) = CalculateNewSize(originalBitmap);
+        var thumbnailBitmap = originalBitmap.Resize(new SKSizeI(newWidth, newHeight), SKFilterQuality.Low);
+        var thumbnailImage = SKImage.FromBitmap(thumbnailBitmap);
+        var thumbnailData = thumbnailImage.Encode();
+        var thumbnail = new Thumbnail() { Data = thumbnailData.ToArray() };
+
+        await _pictureService.SaveThumbnailAsync(thumbnail);
+        
+        return thumbnail;
+    }
+
     private static (int newWidth, int newHeight) CalculateNewSize(SKBitmap originalBitmap)
     {
-        var ratio = Math.Max(originalBitmap.Width / 500.0, originalBitmap.Height / 500.0);
+        //TODO: move constants
+        var ratio = Math.Max(originalBitmap.Width / 400.0, originalBitmap.Height / 400.0);
         var newWidth = (int)(originalBitmap.Width / ratio);
         var newHeight = (int)(originalBitmap.Height / ratio);
         return (newWidth, newHeight);
