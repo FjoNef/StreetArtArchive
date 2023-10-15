@@ -78,7 +78,7 @@ class CreatePictureComponent extends Component {
       <div>
         <h1 id="tableLabel">Create Picture</h1>
         <div>
-          <img alt="" src={this.state.imageUrl}/>
+          <img style={{maxWidth : "100%" }} alt="" src={this.state.imageUrl}/>
         </div>
         <Form onSubmit={this.submit}>
           <Row className="row-cols-lg-auto g-3 align-items-center">

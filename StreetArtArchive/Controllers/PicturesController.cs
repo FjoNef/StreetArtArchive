@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Options;
 using SkiaSharp;
 using StreetArtArchive.Models;
 using StreetArtArchive.Services;
@@ -11,9 +12,12 @@ public class PicturesController : ControllerBase
 {
     private readonly PictureService _pictureService;
 
-    public PicturesController(PictureService pictureService)
+    private readonly IOptions<StreetArtApplicationSettings> _applicationSettings;
+
+    public PicturesController(PictureService pictureService, IOptions<StreetArtApplicationSettings> applicationSettings)
     {
         _pictureService = pictureService;
+        _applicationSettings = applicationSettings;
     }
 
     [HttpGet]
@@ -38,10 +42,9 @@ public class PicturesController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> SavePicture([FromForm] SavePictureRequest request)
     {
-        //TODO: move constants
-        var directory = Directory.CreateDirectory(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData) +
-                                                  Path.Combine("StreetArtArchive", "Pictures"));
-        var filePath = directory + Path.GetRandomFileName() + Path.GetExtension(request.Image.FileName);
+        var directory = Directory.CreateDirectory(_applicationSettings.Value.PicturesFolderPath);
+        var fileName = Path.GetRandomFileName() + Path.GetExtension(request.Image.FileName);
+        var filePath = Path.Combine(directory.ToString(), fileName);
         await using (var stream = System.IO.File.Create(filePath))
         {
             await request.Image.CopyToAsync(stream);
@@ -51,7 +54,7 @@ public class PicturesController : ControllerBase
 
         var newPicture = new PicturesMetadata
         {
-            ImagePath = filePath,
+            ImagePath = fileName,
             ThumbnailId = thumbnail.Id,
             Categories = request.Categories.Select(c => new Category(){ Name = c.Name, Values = new[]{c.Values}}).ToArray()
         };
@@ -64,9 +67,27 @@ public class PicturesController : ControllerBase
     [HttpDelete]
     public async Task<IActionResult> DeleteById(string id)
     {
-        await _pictureService.RemoveAsync(id);
+        var deletedPicture = await _pictureService.RemoveAsync(id);
+
+        if (deletedPicture is null)
+        {
+            return NotFound();
+        }
+
+        DeletePictureFromDisc(deletedPicture.ImagePath);
 
         return Accepted();
+    }
+
+    private void DeletePictureFromDisc(string? imagePath)
+    {
+        if (string.IsNullOrEmpty(imagePath))
+        {
+            return;
+        }
+        var directory = Directory.CreateDirectory(_applicationSettings.Value.PicturesFolderPath);
+        var filePath = Path.Combine(directory.ToString(), imagePath);
+        System.IO.File.Delete(filePath);
     }
 
     private async Task<Thumbnail> CreateThumbnailAsync(SavePictureRequest request)
@@ -77,7 +98,7 @@ public class PicturesController : ControllerBase
             originalBitmap = SKBitmap.Decode(stream);
         }
 
-        var (newWidth, newHeight) = CalculateNewSize(originalBitmap);
+        var (newWidth, newHeight) = CalculateNewSize(originalBitmap, _applicationSettings.Value.ThumbnailMaxSize);
         var thumbnailBitmap = originalBitmap.Resize(new SKSizeI(newWidth, newHeight), SKFilterQuality.Low);
         var thumbnailImage = SKImage.FromBitmap(thumbnailBitmap);
         var thumbnailData = thumbnailImage.Encode();
@@ -88,10 +109,9 @@ public class PicturesController : ControllerBase
         return thumbnail;
     }
 
-    private static (int newWidth, int newHeight) CalculateNewSize(SKBitmap originalBitmap)
+    private static (int newWidth, int newHeight) CalculateNewSize(SKBitmap originalBitmap, int maxSize)
     {
-        //TODO: move constants
-        var ratio = Math.Max(originalBitmap.Width / 400.0, originalBitmap.Height / 400.0);
+        var ratio = Math.Max(originalBitmap.Width / maxSize, originalBitmap.Height / maxSize);
         var newWidth = (int)(originalBitmap.Width / ratio);
         var newHeight = (int)(originalBitmap.Height / ratio);
         return (newWidth, newHeight);

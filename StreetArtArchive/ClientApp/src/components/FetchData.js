@@ -93,8 +93,7 @@ export class FetchData extends Component {
                       {picture.categories.find(c => c.name === "Name")?.values[0]}
                     </CardTitle>
                     <CardText>
-                      {picture.categories.find(c => c.name === "Year")?.values[0]}
-                      {picture.categories.find(c => c.name === "Author")?.values}
+                      {picture.categories.find(c => c.name === "Year")?.values[0]} {picture.categories.find(c => c.name === "Author")?.values}
                     </CardText>
                   </CardBody>
                   <CardBody style={{display: 'flex'}}>

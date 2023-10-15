@@ -10,6 +10,9 @@ builder.Services.AddControllersWithViews();
 builder.Services.Configure<StreetArtDbSettings>(
     builder.Configuration.GetSection("StreetArtDatabase"));
 
+builder.Services.Configure<StreetArtApplicationSettings>(
+    builder.Configuration.GetSection("StreetArtApplicationSettings"));
+
 builder.Services.AddSingleton<PictureService>();
 
 var app = builder.Build();

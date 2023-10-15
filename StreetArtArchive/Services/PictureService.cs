@@ -38,10 +38,12 @@ public class PictureService
     public async Task UpdateAsync(string id, PicturesMetadata updatedPictures) =>
         await _pictureMetadataCollection.ReplaceOneAsync(x => x.Id == id, updatedPictures);
 
-    public async Task RemoveAsync(string id)
+    public async Task<PicturesMetadata?> RemoveAsync(string id)
     {
         var deletedPicture = await _pictureMetadataCollection.FindOneAndDeleteAsync(x => x.Id == id);
         await RemoveThumbnailAsync(deletedPicture?.ThumbnailId);
+
+        return deletedPicture;
     }
     
     public async Task SaveThumbnailAsync(Thumbnail newThumbnail) =>
