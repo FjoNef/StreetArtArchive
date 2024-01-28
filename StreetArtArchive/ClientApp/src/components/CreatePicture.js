@@ -1,5 +1,5 @@
 import React, {Component} from 'react';
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import {Button, Col, Form, FormGroup, Input, InputGroup, Label, Row} from "reactstrap";
 
 class CreatePictureComponent extends Component {
@@ -7,6 +7,7 @@ class CreatePictureComponent extends Component {
 
   constructor(props) {
     super(props);
+    this.id = props.id;
     this.state = {categories: [], imageUrl: "", image: null}
     this.addCategory = this.addCategory.bind(this);
     this.submit = this.submit.bind(this);
@@ -17,7 +18,26 @@ class CreatePictureComponent extends Component {
   }
   
   componentDidMount() {
-    
+    let load = async () => {
+      if(this.id !== '' && this.id != null){
+        const response = await fetch('pictures/GetById?id=' + this.id);        
+        let data = await response.json();
+
+        const picture = await fetch('pictures/GetFullPicture?path=' + data.imagePath);        
+        const pictureBlob = await picture.blob();        
+        const pictureUrl = URL.createObjectURL(pictureBlob);
+        
+        data.image = pictureBlob;
+        data.image.name = data.imagePath;
+        data.imageUrl = pictureUrl;
+
+        return data;
+      }
+      return {categories: [], imageUrl: "", image: null};
+    }
+    load().then(data => {
+      this.setState({categories: data.categories, imageUrl: data.imageUrl, image: data.image});
+    });
   }
 
   addCategory() {
@@ -35,15 +55,20 @@ class CreatePictureComponent extends Component {
     const { navigate } = this.props;
     const formData = new FormData();
     formData.append('image',this.state.image, this.state.image.name);
-    this.state.categories.map((category, index) => {
+    this.state.categories.forEach((category, index) => {
       formData.append('categories['+index+'].name', category.name);
       formData.append('categories['+index+'].values', category.values);
-    })
+    });
+    let method = 'pictures/SavePicture';
+    if(this.id){
+      formData.append('id',this.id);
+      method = 'pictures/UpdatePicture';
+    }
     const config = {
       method: 'POST',
       body: formData
     }
-    const response = await fetch('pictures/SavePicture', config);
+    const response = await fetch(method, config);
 
     if (response.ok) {
       navigate('/fetch-data');
@@ -76,7 +101,7 @@ class CreatePictureComponent extends Component {
   render() {
     return (
       <div>
-        <h1 id="tableLabel">Create Picture</h1>
+        <h1 id="tableLabel">{this.id ? "Edit Picture" : "Create Picture"}</h1>
         <div>
           <img style={{maxWidth : "100%" }} alt="" src={this.state.imageUrl}/>
         </div>
@@ -87,7 +112,7 @@ class CreatePictureComponent extends Component {
             </Col>
           </Row>
           {this.state.categories.map((category, index) =>
-            <Row className="row-cols-lg-auto g-3 align-items-center">
+            <Row key={index} className="row-cols-lg-auto g-3 align-items-center">
               <Col>
                 <FormGroup>
                   <Label>Category Name</Label>
@@ -117,5 +142,7 @@ class CreatePictureComponent extends Component {
 export function CreatePicture(props) {
   const navigate = useNavigate();
 
-  return <CreatePictureComponent {...props} navigate={navigate} />;
+  const { id } = useParams();
+
+  return <CreatePictureComponent {...props} id={id} navigate={navigate} />;
 }

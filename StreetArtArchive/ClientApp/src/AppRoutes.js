@@ -19,6 +19,10 @@ const AppRoutes = [
   {
     path: '/create',
     element: <CreatePicture />
+  },
+  {
+    path: '/edit/:id',
+    element: <CreatePicture />
   }
 ];
 

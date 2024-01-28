@@ -97,7 +97,7 @@ export class FetchData extends Component {
                     </CardText>
                   </CardBody>
                   <CardBody style={{display: 'flex'}}>
-                    <Button color="primary" outline href={"/create?id=" + picture.id}>
+                    <Button color="primary" outline href={"/edit/" + picture.id}>
                       Edit
                     </Button>
                     <Button style={{marginLeft: 'auto'}} color="danger" outline onClick={_ => this.selectPictureForRemoval(picture.id)}>
